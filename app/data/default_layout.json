@@ -105,6 +105,39 @@
       "elev": 0,
       "clearH": 14,
       "color": "#55657d"
+    },
+    {
+      "id": "MECANIZADO",
+      "name": "Mecanizado",
+      "x": 8,
+      "y": 0,
+      "w": 9,
+      "d": 15,
+      "elev": 0,
+      "clearH": 4,
+      "color": "#3d6b8a"
+    },
+    {
+      "id": "PASILLO-TALLER",
+      "name": "Pasillo",
+      "x": 17,
+      "y": 0,
+      "w": 2,
+      "d": 15,
+      "elev": 0,
+      "clearH": 4,
+      "color": "#2a2f36"
+    },
+    {
+      "id": "MONTAJE",
+      "name": "Montaje",
+      "x": 19,
+      "y": 0,
+      "w": 9,
+      "d": 15,
+      "elev": 0,
+      "clearH": 4,
+      "color": "#a87d52"
     }
   ],
   "nodes": [],
@@ -115,7 +148,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "C",
       "bayStart": 1,
       "bayReverse": false,
@@ -131,7 +168,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "B",
       "bayStart": 1,
       "bayReverse": false,
@@ -147,7 +188,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "A",
       "bayStart": 1,
       "bayReverse": false,
@@ -163,7 +208,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "Z",
       "bayStart": 1,
       "bayReverse": false,
@@ -179,7 +228,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "5",
       "bayStart": 1,
       "bayReverse": false,
@@ -195,7 +248,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "6",
       "bayStart": 1,
       "bayReverse": false,
@@ -211,7 +268,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "8",
       "bayStart": 1,
       "bayReverse": false,
@@ -227,7 +288,11 @@
       "type": "STD",
       "bays": 13,
       "levels": 3,
-      "levelHeights": [6, 6, 6],
+      "levelHeights": [
+        6,
+        6,
+        6
+      ],
       "rowToken": "7",
       "bayStart": 1,
       "bayReverse": false,
@@ -3675,11 +3740,376 @@
     }
   ],
   "editor": {
-    "schemaVersion": 6,
+    "schemaVersion": 7,
     "naming": {
       "separator": "-",
       "bayPad": 2
     },
     "binOverrides": {}
-  }
+  },
+  "objectTypes": {
+    "cnc": {
+      "id": "cnc",
+      "name": "CNC",
+      "category": "machines",
+      "width": 3.2,
+      "depth": 2.2,
+      "height": 2.4,
+      "color": "#5279a8",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "lathe": {
+      "id": "lathe",
+      "name": "Lathe",
+      "category": "machines",
+      "width": 2.8,
+      "depth": 1.2,
+      "height": 1.6,
+      "color": "#4a7a9c",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "mill": {
+      "id": "mill",
+      "name": "Milling machine",
+      "category": "machines",
+      "width": 2,
+      "depth": 1.8,
+      "height": 2,
+      "color": "#52708a",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "drill": {
+      "id": "drill",
+      "name": "Drill press",
+      "category": "machines",
+      "width": 0.8,
+      "depth": 0.8,
+      "height": 2.1,
+      "color": "#6a7f94",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "press": {
+      "id": "press",
+      "name": "Press",
+      "category": "machines",
+      "width": 1.8,
+      "depth": 1.8,
+      "height": 2.6,
+      "color": "#3d6b8a",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "saw": {
+      "id": "saw",
+      "name": "Saw",
+      "category": "machines",
+      "width": 1.6,
+      "depth": 1,
+      "height": 1.4,
+      "color": "#567c91",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "robot": {
+      "id": "robot",
+      "name": "Industrial robot",
+      "category": "robotics",
+      "width": 1,
+      "depth": 1,
+      "height": 2,
+      "color": "#c45252",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "cobot": {
+      "id": "cobot",
+      "name": "Cobot",
+      "category": "robotics",
+      "width": 0.5,
+      "depth": 0.5,
+      "height": 1.4,
+      "color": "#c47a52",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "agv": {
+      "id": "agv",
+      "name": "AGV",
+      "category": "robotics",
+      "width": 0.8,
+      "depth": 0.5,
+      "height": 0.4,
+      "color": "#c4a052",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "table": {
+      "id": "table",
+      "name": "Table",
+      "category": "furniture",
+      "width": 1.6,
+      "depth": 0.8,
+      "height": 0.75,
+      "color": "#a87d52",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "workbench": {
+      "id": "workbench",
+      "name": "Workbench",
+      "category": "furniture",
+      "width": 2,
+      "depth": 0.8,
+      "height": 0.9,
+      "color": "#a87d52",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "cabinet": {
+      "id": "cabinet",
+      "name": "Cabinet",
+      "category": "furniture",
+      "width": 1,
+      "depth": 0.5,
+      "height": 2,
+      "color": "#6b5a45",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "shelf": {
+      "id": "shelf",
+      "name": "Shelving unit",
+      "category": "furniture",
+      "width": 1.2,
+      "depth": 0.4,
+      "height": 2,
+      "color": "#7a6a50",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "wall": {
+      "id": "wall",
+      "name": "Wall",
+      "category": "infrastructure",
+      "width": 3,
+      "depth": 0.2,
+      "height": 2.5,
+      "color": "#555f68",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "door": {
+      "id": "door",
+      "name": "Door",
+      "category": "infrastructure",
+      "width": 1,
+      "depth": 0.2,
+      "height": 2.1,
+      "color": "#8a6a4a",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "pillar": {
+      "id": "pillar",
+      "name": "Pillar",
+      "category": "infrastructure",
+      "width": 0.4,
+      "depth": 0.4,
+      "height": 3,
+      "color": "#4a4a4a",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "extinguisher": {
+      "id": "extinguisher",
+      "name": "Fire extinguisher",
+      "category": "safety",
+      "width": 0.3,
+      "depth": 0.3,
+      "height": 0.6,
+      "color": "#c0392b",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "emergency_exit": {
+      "id": "emergency_exit",
+      "name": "Emergency exit",
+      "category": "safety",
+      "width": 1,
+      "depth": 0.2,
+      "height": 2.1,
+      "color": "#2ecc71",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "fence": {
+      "id": "fence",
+      "name": "Safety fence",
+      "category": "safety",
+      "width": 2,
+      "depth": 0.1,
+      "height": 1.1,
+      "color": "#d4a53d",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "danger_zone": {
+      "id": "danger_zone",
+      "name": "Danger zone marking",
+      "category": "safety",
+      "width": 2,
+      "depth": 2,
+      "height": 0.05,
+      "color": "#e67e22",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "pc": {
+      "id": "pc",
+      "name": "PC",
+      "category": "other",
+      "width": 0.5,
+      "depth": 0.5,
+      "height": 0.4,
+      "color": "#3d4f5c",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "display": {
+      "id": "display",
+      "name": "Display / screen",
+      "category": "other",
+      "width": 1,
+      "depth": 0.1,
+      "height": 0.6,
+      "color": "#2c3e50",
+      "visual": {
+        "type": "rectangle"
+      }
+    },
+    "electrical_panel": {
+      "id": "electrical_panel",
+      "name": "Electrical panel",
+      "category": "other",
+      "width": 0.8,
+      "depth": 0.3,
+      "height": 2,
+      "color": "#34495e",
+      "visual": {
+        "type": "rectangle"
+      }
+    }
+  },
+  "objects": [
+    {
+      "id": "CNC-01",
+      "name": "CNC",
+      "type": "cnc",
+      "x": 11,
+      "y": 4,
+      "rotation": 0,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    },
+    {
+      "id": "CNC-02",
+      "name": "CNC",
+      "type": "cnc",
+      "x": 15,
+      "y": 4,
+      "rotation": 90,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    },
+    {
+      "id": "LATHE-01",
+      "name": "Lathe",
+      "type": "lathe",
+      "x": 13,
+      "y": 11,
+      "rotation": 137.5,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    },
+    {
+      "id": "TABLE-01",
+      "name": "Table",
+      "type": "table",
+      "x": 21,
+      "y": 3,
+      "rotation": 0,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    },
+    {
+      "id": "TABLE-02",
+      "name": "Table",
+      "type": "table",
+      "x": 25,
+      "y": 3,
+      "rotation": 45,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    },
+    {
+      "id": "ROBOT-01",
+      "name": "Industrial robot",
+      "type": "robot",
+      "x": 23,
+      "y": 8,
+      "rotation": 0,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    },
+    {
+      "id": "CABINET-01",
+      "name": "Cabinet",
+      "type": "cabinet",
+      "x": 26,
+      "y": 12,
+      "rotation": 90,
+      "dataBinding": {
+        "entityId": null
+      },
+      "properties": {}
+    }
+  ],
+  "assets": {}
 }

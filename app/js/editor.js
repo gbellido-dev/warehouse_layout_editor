@@ -8,6 +8,11 @@ import { createPreview3D } from './preview3d.js';
 import { migrate } from './migrations.js';
 import { fromDbConnect, toDbConnect } from './dbconnect.js';
 import { createLabelState } from './labels.js';
+import { resolveObject, createObjectInstance, duplicateObjectInstance, createCustomObjectType } from './objects/objectFactory.js';
+import { hitTestObjects } from './objects/objectHitTest.js';
+import { drawObject2d } from './objects/objectRenderer2d.js';
+import { getCachedImage, storeImageAsset, isAcceptedImageFile } from './assets/imageLoader.js';
+import { renderObjectLibrary } from './ui/objectLibrary.js';
 
 let state;
 let preview;
@@ -35,6 +40,8 @@ let mode3d = false;
 let bgImage = null;
 let saveTimer = null;
 let selBay = null; // { rack, bayIndex } — which bay is highlighted for the readout
+let placeObjectType = null; // objectTypes key armed by the library panel for the 'object' tool
+let editMode = true; // false = read-only VIEW/SCADA mode (see setEditMode)
 
 // ---------- coordinate transforms ----------
 const sx = (x) => (x - view.cx) * view.zoom * devicePixelRatio + cv.width / 2;
@@ -247,6 +254,19 @@ function draw() {
     }
   });
 
+  (state.objects || []).forEach((o) => {
+    const resolved = resolveObject(o, state.objectTypes || {});
+    const seld = sel && sel.kind === 'object' && sel.obj === o;
+    drawObject2d(ctx, o, resolved, { sx, sy, z }, (source) => getCachedImage(source, draw), seld);
+    if (labelState.get()) {
+      ctx.fillStyle = seld ? '#5fa8e8' : '#eef2f6';
+      ctx.font = `600 ${Math.max(10, z * 2.2)}px Consolas`;
+      ctx.textAlign = 'center';
+      ctx.fillText(o.name || resolved.name, sx(o.x), sy(o.y) - (resolved.depth * z) / 2 - 6);
+      ctx.textAlign = 'left';
+    }
+  });
+
   state.edges.forEach((ed) => {
     const a = state.nodes.find((n) => n.id === ed.a);
     const b = state.nodes.find((n) => n.id === ed.b);
@@ -327,6 +347,9 @@ function setTool(t) {
     node: 'Click to place a node (door, dock, junction…)',
     edge: 'Click first node, then second node',
     delete: 'Click anything to delete it',
+    object: placeObjectType
+      ? `Click to place a new ${placeObjectType} (pick another type in the Object library)`
+      : 'Pick an object type from the Object library first',
   };
   setHint(hints[t] || '');
   cv.style.cursor = t === 'select' ? 'default' : 'crosshair';
@@ -343,6 +366,8 @@ function hitTest(x, y) {
     const b = state.nodes.find((n) => n.id === ed.b);
     if (a && b && ptSegDist(x, y, a.x, a.y, b.x, b.y) < tol * 0.8) return { kind: 'edge', obj: ed };
   }
+  const objHit = hitTestObjects(x, y, state.objects || [], state.objectTypes || {});
+  if (objHit) return { kind: 'object', obj: objHit };
   for (const r of [...state.racks].reverse()) {
     const t = state.binTypes[r.type] || { w: 4, d: 4 };
     const w = r.dir === 'E' ? r.bays * t.w : t.d;
@@ -359,6 +384,7 @@ function deleteSelected() {
   if (!sel) return;
   if (sel.kind === 'zone') state.zones = state.zones.filter((z) => z !== sel.obj);
   if (sel.kind === 'rack') state.racks = state.racks.filter((r) => r !== sel.obj);
+  if (sel.kind === 'object') state.objects = state.objects.filter((o) => o !== sel.obj);
   if (sel.kind === 'edge') state.edges = state.edges.filter((ed) => ed !== sel.obj);
   if (sel.kind === 'node') {
     state.edges = state.edges.filter((ed) => ed.a !== sel.obj.id && ed.b !== sel.obj.id);
@@ -422,6 +448,32 @@ function bindNum(id, key, obj, int) {
 }
 
 function renderProps() {
+  if (!editMode) {
+    if (!sel) {
+      props.innerHTML = `<h2>View mode (read-only)</h2>
+        <div class="hintline">Click any object on the plan to inspect it. Clicking a placed object fires a
+        <code>workshop:object-click</code> event on <code>window</code> with its id, type and
+        dataBinding.entityId. Switch back to Edit Mode to make changes.</div>`;
+      return;
+    }
+    const o = sel.obj;
+    if (sel.kind === 'object') {
+      const resolved = resolveObject(o, state.objectTypes);
+      props.innerHTML =
+        `<h2>${o.name || resolved.name}</h2>` +
+        `<div class="hintline">${resolved.category}</div>` +
+        f('ID', `<input type="text" value="${o.id}" disabled>`) +
+        f('Type', `<input type="text" value="${o.type}" disabled>`) +
+        f('Entity ID', `<input type="text" value="${o.dataBinding?.entityId ?? ''}" placeholder="unbound" disabled>`) +
+        `<div class="hintline">x ${o.x} m &middot; y ${o.y} m &middot; rotation ${o.rotation || 0}°</div>`;
+    } else {
+      props.innerHTML =
+        `<h2>${sel.kind}</h2>` +
+        f('ID', `<input type="text" value="${o.id ?? ''}" disabled>`) +
+        `<div class="hintline">Read-only in View mode.</div>`;
+    }
+    return;
+  }
   if (!sel) {
     props.innerHTML = `<h2>Properties</h2>
       <div class="hintline">Nothing selected. Click an object with the Select tool,
@@ -500,6 +552,189 @@ function renderProps() {
     document.getElementById('p_ramp').onchange = (e) => {
       o.ramp = e.target.checked;
       save();
+      draw();
+    };
+    document.getElementById('p_del').onclick = deleteSelected;
+  }
+  if (sel.kind === 'object') {
+    const resolved = resolveObject(o, state.objectTypes);
+    const t = state.objectTypes[o.type];
+    const hasOverride = (key) => Object.prototype.hasOwnProperty.call(o, key);
+    const dimField = (label, key, step) =>
+      f(
+        label,
+        `<input type="number" id="p_${key}" value="${resolved[key]}" min="0.01" step="${step}">` +
+          `<button class="btn small" id="p_${key}_rst" title="Reset to type default" ${hasOverride(key) ? '' : 'disabled'}>↺</button>`,
+      );
+
+    props.innerHTML =
+      `<h2>Object</h2>` +
+      `<div class="hintline">${t ? t.name : o.type} &middot; ${resolved.category}</div>` +
+      f('ID', `<input type="text" id="p_id" value="${o.id}">`) +
+      f('Name', `<input type="text" id="p_name" value="${o.name ?? ''}" placeholder="${resolved.name}">`) +
+      f('x (m)', `<input type="number" id="p_x" value="${o.x}" step="0.1">`) +
+      f('y (m)', `<input type="number" id="p_y" value="${o.y}" step="0.1">`) +
+      f('Rotation (deg)', `<input type="number" id="p_rot" value="${o.rotation || 0}" step="0.1">`) +
+      `<div class="btnrow">
+        <button class="btn small" id="p_rot_m45">⟲ 45°</button>
+        <button class="btn small" id="p_rot_p45">⟳ 45°</button>
+      </div>` +
+      dimField('Width (m)', 'width', 0.05) +
+      dimField('Depth (m)', 'depth', 0.05) +
+      dimField('Height (m)', 'height', 0.05) +
+      f(
+        'Color',
+        `<input type="color" id="p_color" value="${resolved.color}">` +
+          `<button class="btn small" id="p_color_rst" title="Reset to type default" ${hasOverride('color') ? '' : 'disabled'}>↺</button>`,
+      ) +
+      f(
+        'Visual',
+        `<select id="p_vtype">${['rectangle', 'image', 'svg', 'billboard', 'model3d']
+          .map((v) => `<option ${resolved.visual.type === v ? 'selected' : ''}>${v}</option>`)
+          .join('')}</select>`,
+      ) +
+      (resolved.visual.type !== 'rectangle'
+        ? f(
+            'Source',
+            `<input type="text" id="p_vsrc" value="${resolved.visual.source ?? ''}" placeholder="asset://… or URL">`,
+          ) +
+          f(
+            'Fit',
+            `<select id="p_vfit">
+              <option ${resolved.visual.fit === 'contain' ? 'selected' : ''}>contain</option>
+              <option ${resolved.visual.fit === 'cover' ? 'selected' : ''}>cover</option>
+            </select>`,
+          ) +
+          `<div class="btnrow"><button class="btn small" id="p_vupload">Upload image…</button></div>`
+        : '') +
+      f(
+        'Data binding',
+        `<input type="text" id="p_bind" value="${o.dataBinding?.entityId ?? ''}" placeholder="entityId (unbound)">`,
+      ) +
+      `<details><summary>Custom properties (JSON)</summary>
+        <textarea id="p_props" rows="3" style="width:100%;background:var(--bg);color:var(--ink);
+          border:1px solid var(--line);border-radius:4px;font:11px Consolas,monospace;padding:5px">${JSON.stringify(o.properties ?? {}, null, 2)}</textarea>
+      </details>` +
+      `<div class="btnrow">
+        <button class="btn small" id="p_dup">Duplicate</button>
+        <button class="btn small" id="p_del">Delete object</button>
+      </div>`;
+
+    bind('p_id', (v) => {
+      o.id = v;
+    });
+    bind('p_name', (v) => {
+      o.name = v || undefined;
+    });
+    bindNum('p_x', 'x', o);
+    bindNum('p_y', 'y', o);
+    bindNum('p_rot', 'rotation', o);
+
+    document.getElementById('p_rot_m45').onclick = () => {
+      o.rotation = ((o.rotation || 0) - 45 + 360) % 360;
+      save();
+      renderProps();
+      draw();
+    };
+    document.getElementById('p_rot_p45').onclick = () => {
+      o.rotation = ((o.rotation || 0) + 45) % 360;
+      save();
+      renderProps();
+      draw();
+    };
+
+    ['width', 'depth', 'height'].forEach((key) => {
+      document.getElementById(`p_${key}`).addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        if (v > 0) {
+          o[key] = v;
+          save();
+          renderProps();
+          draw();
+        }
+      });
+      document.getElementById(`p_${key}_rst`).addEventListener('click', () => {
+        delete o[key];
+        save();
+        renderProps();
+        draw();
+      });
+    });
+
+    document.getElementById('p_color').addEventListener('input', (e) => {
+      o.color = e.target.value;
+      save();
+      renderProps();
+      draw();
+    });
+    document.getElementById('p_color_rst').addEventListener('click', () => {
+      delete o.color;
+      save();
+      renderProps();
+      draw();
+    });
+
+    document.getElementById('p_vtype').addEventListener('change', (e) => {
+      o.visual = { ...(o.visual ?? {}), type: e.target.value };
+      save();
+      renderProps();
+      draw();
+    });
+    const vsrc = document.getElementById('p_vsrc');
+    if (vsrc) {
+      vsrc.addEventListener('input', (e) => {
+        o.visual = { ...(o.visual ?? { type: resolved.visual.type }), source: e.target.value };
+        save();
+        draw();
+      });
+    }
+    const vfit = document.getElementById('p_vfit');
+    if (vfit) {
+      vfit.addEventListener('change', (e) => {
+        o.visual = { ...(o.visual ?? { type: resolved.visual.type }), fit: e.target.value };
+        save();
+        draw();
+      });
+    }
+    const vupload = document.getElementById('p_vupload');
+    if (vupload) {
+      vupload.addEventListener('click', () => {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'image/png,image/jpeg,image/webp,image/svg+xml';
+        inp.onchange = async () => {
+          const file = inp.files[0];
+          if (!file || !isAcceptedImageFile(file)) return;
+          const source = await storeImageAsset(file);
+          const keepType = o.visual?.type === 'svg' || o.visual?.type === 'billboard' ? o.visual.type : 'image';
+          o.visual = { ...(o.visual ?? {}), type: keepType, source };
+          save();
+          renderProps();
+          draw();
+        };
+        inp.click();
+      });
+    }
+
+    bind('p_bind', (v) => {
+      o.dataBinding = { ...(o.dataBinding ?? {}), entityId: v || null };
+    });
+
+    document.getElementById('p_props').addEventListener('change', (e) => {
+      try {
+        o.properties = JSON.parse(e.target.value || '{}');
+        save();
+      } catch (err) {
+        alert('Invalid JSON: ' + err.message);
+      }
+    });
+
+    document.getElementById('p_dup').onclick = () => {
+      const clone = duplicateObjectInstance(o, state.objects);
+      state.objects.push(clone);
+      sel = { kind: 'object', obj: clone };
+      save();
+      renderProps();
       draw();
     };
     document.getElementById('p_del').onclick = deleteSelected;
@@ -724,6 +959,27 @@ function renderProps() {
   }
 }
 
+// ---------- object library panel ----------
+function renderObjLibrary() {
+  const container = document.getElementById('objectLibrary');
+  if (!container) return;
+  renderObjectLibrary(container, {
+    getObjectTypes: () => state.objectTypes,
+    getActiveType: () => (tool === 'object' ? placeObjectType : null),
+    onSelectType: (typeKey) => {
+      placeObjectType = typeKey;
+      setTool('object');
+      renderObjLibrary();
+    },
+    onCreateCustomType: (formData) => {
+      const t = createCustomObjectType(formData, state.objectTypes);
+      state.objectTypes[t.id] = t;
+      save();
+      renderObjLibrary();
+    },
+  });
+}
+
 // ---------- bin types panel ----------
 function renderBinTypes() {
   const box = document.getElementById('binTypeList');
@@ -815,6 +1071,7 @@ async function importLayoutFile(file) {
   sel = null;
   loadBgImage();
   renderBinTypes();
+  renderObjLibrary();
   renderProps();
   updateBgInfo();
   save();
@@ -834,6 +1091,27 @@ function setMode3d(on) {
     preview.teardown();
     draw();
   }
+}
+
+// ---------- edit / view(SCADA) mode toggle ----------
+// VIEW mode is read-only: every editing tool, the object library, bin types,
+// background and settings controls become inert (see #side.view-mode in
+// styles.css); only Select (to inspect) and Labels stay live. Clicking a
+// placed object dispatches a 'workshop:object-click' event on window with
+// { id, type, entityId } — the hook a future SCADA front-end binds to
+// (see the dataBinding.entityId field on each object).
+function setEditMode(on) {
+  editMode = on;
+  calMode = false;
+  calClicks = [];
+  document.getElementById('side').classList.toggle('view-mode', !on);
+  const btn = document.getElementById('toggleMode');
+  btn.textContent = on ? 'Edit Mode' : 'View Mode (SCADA)';
+  btn.classList.toggle('active', !on);
+  if (!on) setTool('select');
+  sel = null;
+  renderProps();
+  draw();
 }
 
 // ---------- label toggle ----------
@@ -859,6 +1137,21 @@ function wirePointer() {
 
     if (e.button === 2) {
       panning = { mx, my };
+      return;
+    }
+
+    if (!editMode) {
+      const h = hitTest(x, y);
+      sel = h;
+      renderProps();
+      draw();
+      if (h && h.kind === 'object') {
+        window.dispatchEvent(
+          new CustomEvent('workshop:object-click', {
+            detail: { id: h.obj.id, type: h.obj.type, entityId: h.obj.dataBinding?.entityId ?? null },
+          }),
+        );
+      }
       return;
     }
 
@@ -892,7 +1185,7 @@ function wirePointer() {
       } else {
         selBay = null;
       }
-      if (h && (h.kind === 'zone' || h.kind === 'rack' || h.kind === 'node')) {
+      if (h && (h.kind === 'zone' || h.kind === 'rack' || h.kind === 'node' || h.kind === 'object')) {
         dragMove = { ox: x - h.obj.x, oy: y - h.obj.y };
       }
       renderProps();
@@ -901,6 +1194,19 @@ function wirePointer() {
     }
     if (tool === 'zone' || tool === 'rack') {
       dragDraw = { x0: snap(x), y0: snap(y), x1: snap(x), y1: snap(y) };
+      return;
+    }
+    if (tool === 'object') {
+      if (!placeObjectType || !state.objectTypes[placeObjectType]) {
+        setHint('Pick an object type from the Object library first');
+        return;
+      }
+      const obj = createObjectInstance(placeObjectType, snap(x), snap(y), state.objectTypes, state.objects);
+      state.objects.push(obj);
+      sel = { kind: 'object', obj };
+      save();
+      renderProps();
+      draw();
       return;
     }
     if (tool === 'node') {
@@ -1059,13 +1365,18 @@ function wireKeyboard() {
   addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const k = e.key.toLowerCase();
+    if (k === 'm') {
+      setEditMode(!editMode);
+      return;
+    }
     if (k === 'v') setTool('select');
+    if (k === 'l') toggleLabels();
+    if (!editMode) return; // the remaining shortcuts are editing-only
     if (k === 'z') setTool('zone');
     if (k === 'r') setTool('rack');
     if (k === 'n') setTool('node');
     if (k === 'e') setTool('edge');
     if (k === 'x') setTool('delete');
-    if (k === 'l') toggleLabels();
     if (k === 'escape') {
       pendingEdgeNode = null;
       dragDraw = null;
@@ -1150,6 +1461,7 @@ function wirePanels() {
   document.getElementById('view2d').onclick = () => setMode3d(false);
   document.getElementById('view3d').onclick = () => setMode3d(true);
   document.getElementById('toggleLabels').onclick = toggleLabels;
+  document.getElementById('toggleMode').onclick = () => setEditMode(!editMode);
   document.getElementById('exportBtn').onclick = exportLayout;
   document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
   document.getElementById('importFile').onchange = (e) => {
@@ -1177,6 +1489,7 @@ export function initEditor(layout) {
   loadBgImage();
   renderProps();
   renderBinTypes();
+  renderObjLibrary();
   updateBgInfo();
   resize();
   setTool('select');

@@ -82,8 +82,10 @@ const V5_LAYOUT = {
 };
 
 test('migration 5→6 adds bayLevelOverrides: {} to racks that lack it', () => {
+  // migrate() always walks forward to SCHEMA_VERSION (now 7), not just to 6 —
+  // this test only cares that the 5→6 step ran and seeded bayLevelOverrides.
   const up = migrate(V5_LAYOUT);
-  assert.equal(up.editor.schemaVersion, 6);
+  assert.equal(up.editor.schemaVersion, SCHEMA_VERSION);
   assert.deepEqual(up.racks[0].bayLevelOverrides, {});
 });
 
@@ -101,10 +103,10 @@ test('migration 5→6 preserves existing bayLevelOverrides on racks that already
   assert.deepEqual(up.racks[0].bayLevelOverrides, { 1: { levels: 1, levelHeights: [3] } });
 });
 
-test('migration 5→6 is idempotent (re-running on already-v6 layout is a no-op)', () => {
+test('migration 5→6 is idempotent (re-running on already-migrated layout is a no-op)', () => {
   const up1 = migrate(V5_LAYOUT);
-  assert.equal(up1.editor.schemaVersion, 6);
-  // A v6 layout should pass through migrate() unchanged in schemaVersion
+  assert.equal(up1.editor.schemaVersion, SCHEMA_VERSION);
+  // An already-current layout should pass through migrate() unchanged in schemaVersion
   const up2 = migrate(up1);
-  assert.equal(up2.editor.schemaVersion, 6);
+  assert.equal(up2.editor.schemaVersion, SCHEMA_VERSION);
 });

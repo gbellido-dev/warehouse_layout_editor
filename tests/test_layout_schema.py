@@ -108,3 +108,62 @@ def test_bayLevelOverrides_survives_from_db_connect_round_trip():
     layout["racks"][0]["bayLevelOverrides"] = {"2": {"levels": 1, "levelHeights": [3.5]}}
     state = from_db_connect(layout)
     assert state["racks"][0]["bayLevelOverrides"] == {"2": {"levels": 1, "levelHeights": [3.5]}}
+
+
+# ── v7 generic object model: objectTypes / objects / assets ─────────────────
+
+
+def test_default_layout_has_generic_objects_and_types():
+    state = from_db_connect(load_default())
+    assert "cnc" in state["objectTypes"]
+    assert len(state["objects"]) > 0
+    assert isinstance(state["assets"], dict)
+
+
+def test_rejects_object_with_unknown_type():
+    state = from_db_connect(load_default())
+    state["objects"].append({"id": "X-01", "type": "does_not_exist", "x": 0, "y": 0})
+    errors = validate_layout(state)
+    assert any("is not a defined objectType" in e for e in errors)
+
+
+def test_rejects_duplicate_object_ids():
+    state = from_db_connect(load_default())
+    state["objects"].append({"id": "DUP", "type": "cnc", "x": 0, "y": 0})
+    state["objects"].append({"id": "DUP", "type": "cnc", "x": 1, "y": 1})
+    errors = validate_layout(state)
+    assert any("is not unique" in e for e in errors)
+
+
+def test_accepts_object_with_instance_overrides_and_rotation():
+    state = from_db_connect(load_default())
+    state["objects"].append(
+        {"id": "CNC-99", "type": "cnc", "x": 1, "y": 1, "rotation": 137.5, "width": 4.0}
+    )
+    errors = validate_layout(state)
+    assert errors == [], errors
+
+
+def test_rejects_non_positive_instance_dimension_override():
+    state = from_db_connect(load_default())
+    state["objects"].append({"id": "BAD-01", "type": "cnc", "x": 0, "y": 0, "width": -2})
+    errors = validate_layout(state)
+    assert any("width must be a positive number" in e for e in errors)
+
+
+def test_rejects_unknown_visual_type():
+    state = from_db_connect(load_default())
+    state["objects"].append({"id": "BAD-02", "type": "cnc", "x": 0, "y": 0, "visual": {"type": "hologram"}})
+    errors = validate_layout(state)
+    assert any("visual.type must be one of" in e for e in errors)
+
+
+def test_rejects_missing_objectTypes_objects_assets():
+    state = from_db_connect(load_default())
+    del state["objectTypes"]
+    del state["objects"]
+    del state["assets"]
+    errors = validate_layout(state)
+    assert "objectTypes must be an object" in errors
+    assert "objects must be an array" in errors
+    assert "assets must be an object" in errors

@@ -5,8 +5,16 @@
 // that upgrades the previous version to the new one. validateLayout() is a
 // lightweight structural check used by import and by the test suite; it is not a
 // full JSON-Schema validator, just enough to catch obviously broken files.
+//
+// v7 adds a generic object model (objectTypes/objects) for the Workshop Layout
+// Editor on top of the v6 warehouse model (racks/binTypes/bins/naming). The v6
+// fields are NOT removed — old warehouse layouts keep their racks fully intact
+// (see migrations.js 6->7) while new content is authored as generic objects.
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
+
+export const VISUAL_TYPES = ['rectangle', 'image', 'svg', 'billboard', 'model3d'];
+export const VISUAL_FITS = ['contain', 'cover'];
 
 // Editor-native kinds (door/ramp/junction/dock/staging/charge) plus db_connect
 // kinds (access_point/waypoint/staging_area/reference_marker) tolerated on
@@ -139,5 +147,68 @@ export function validateLayout(layout) {
     }
   });
 
+  // objectTypes — the generic object library (keyed by type id)
+  const objectTypes = layout.objectTypes;
+  if (objectTypes == null || typeof objectTypes !== 'object' || Array.isArray(objectTypes)) {
+    push('objectTypes must be an object');
+  } else {
+    Object.entries(objectTypes).forEach(([key, t]) => {
+      if (typeof t.id !== 'string' || t.id !== key)
+        push(`objectTypes.${key}.id must be a string equal to its key`);
+      if (typeof t.name !== 'string') push(`objectTypes.${key}.name must be a string`);
+      if (typeof t.category !== 'string') push(`objectTypes.${key}.category must be a string`);
+      for (const k of ['width', 'depth', 'height']) {
+        if (!isFiniteNumber(t[k]) || t[k] <= 0) push(`objectTypes.${key}.${k} must be a positive number`);
+      }
+      if (t.visual) validateVisual(t.visual, `objectTypes.${key}.visual`, push);
+    });
+  }
+
+  // objects — generic object instances placed in the layout
+  if (!Array.isArray(layout.objects)) {
+    push('objects must be an array');
+  } else {
+    const typeNames = new Set(Object.keys(objectTypes || {}));
+    const objectIds = new Set();
+    layout.objects.forEach((o, i) => {
+      if (typeof o.id !== 'string' || o.id.length === 0) push(`objects[${i}].id must be a non-empty string`);
+      else if (objectIds.has(o.id)) push(`objects[${i}].id "${o.id}" is not unique`);
+      else objectIds.add(o.id);
+      if (typeof o.type !== 'string' || !typeNames.has(o.type))
+        push(`objects[${i}].type "${o.type}" is not a defined objectType`);
+      if (!isFiniteNumber(o.x) || !isFiniteNumber(o.y)) push(`objects[${i}] needs numeric x,y (centre point)`);
+      if (o.rotation != null && !isFiniteNumber(o.rotation)) push(`objects[${i}].rotation must be a number`);
+      for (const k of ['width', 'depth', 'height']) {
+        if (o[k] != null && (!isFiniteNumber(o[k]) || o[k] <= 0))
+          push(`objects[${i}].${k} must be a positive number when set`);
+      }
+      if (o.visual) validateVisual(o.visual, `objects[${i}].visual`, push);
+      if (o.dataBinding != null && typeof o.dataBinding !== 'object')
+        push(`objects[${i}].dataBinding must be an object`);
+      if (o.properties != null && typeof o.properties !== 'object')
+        push(`objects[${i}].properties must be an object`);
+    });
+  }
+
+  if (layout.assets == null || typeof layout.assets !== 'object' || Array.isArray(layout.assets)) {
+    push('assets must be an object');
+  }
+
   return { ok: errors.length === 0, errors };
+}
+
+function validateVisual(visual, path, push) {
+  if (typeof visual !== 'object' || Array.isArray(visual)) {
+    push(`${path} must be an object`);
+    return;
+  }
+  if (!VISUAL_TYPES.includes(visual.type)) {
+    push(`${path}.type must be one of ${VISUAL_TYPES.join(', ')}`);
+  }
+  if (visual.fit != null && !VISUAL_FITS.includes(visual.fit)) {
+    push(`${path}.fit must be one of ${VISUAL_FITS.join(', ')}`);
+  }
+  if (visual.source != null && typeof visual.source !== 'string') {
+    push(`${path}.source must be a string`);
+  }
 }

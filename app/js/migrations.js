@@ -11,6 +11,7 @@
 
 import { SCHEMA_VERSION } from './schema.js';
 import { expandBins, edgeLength, zoneOf } from './geometry.js';
+import { cloneDefaultObjectTypes } from './objects/objectTypes.js';
 
 // version N  ->  function that produces version N+1
 const MIGRATIONS = {
@@ -179,6 +180,33 @@ const MIGRATIONS = {
       },
     };
   },
+
+  // 6 -> 7: generic object model (Workshop Layout Editor).
+  // Purely additive — every v6 field (racks/binTypes/bins/naming/
+  // binOverrides, the whole db_connect warehouse shape) is kept byte-for-byte
+  // intact. Three new top-level sections are seeded so a migrated layout
+  // satisfies schema.js's v7 validation:
+  //   - objectTypes: the built-in generic object library (machines, robots,
+  //     furniture, ...), copied in so every layout can place them immediately
+  //     without a separate "install the catalog" step.
+  //   - objects: [] — no racks are auto-converted to generic objects. Racks
+  //     remain first-class legacy data (they feed the WMS db_connect export
+  //     untouched); a user who wants a rack represented as a generic object
+  //     adds one by hand. This avoids a lossy, surprising auto-conversion of
+  //     real warehouse data.
+  //   - assets: {} — the (future) IndexedDB-backed binary asset manifest
+  //     pass-through; empty because asset blobs live in IndexedDB, not in the
+  //     layout file (see assets/assetStore.js).
+  6: (v6) => ({
+    ...v6,
+    objectTypes: v6.objectTypes ?? cloneDefaultObjectTypes(),
+    objects: v6.objects ?? [],
+    assets: v6.assets ?? {},
+    editor: {
+      ...(v6.editor ?? {}),
+      schemaVersion: 7,
+    },
+  }),
 };
 
 // A layout with no explicit schemaVersion predates the field; treat it as v1.

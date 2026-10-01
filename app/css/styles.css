@@ -76,6 +76,21 @@ body {
   color: #fff;
   border-color: var(--node);
 }
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* View/SCADA mode: the whole left panel goes read-only (the properties
+   panel is swapped for a read-only info card by renderProps() itself; this
+   blanket rule covers the object library, bin types, background and
+   settings controls without touching each one individually). */
+#side.view-mode input,
+#side.view-mode select,
+#side.view-mode button {
+  pointer-events: none;
+  opacity: 0.45;
+}
 .sep {
   width: 1px;
   height: 22px;
@@ -223,6 +238,65 @@ canvas#c2d {
   font-size: 10px;
   color: var(--dim);
 }
+/* ---------- object library panel ---------- */
+.objlib-cat {
+  font:
+    600 10px/1 Consolas,
+    monospace;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin: 10px 0 5px;
+}
+.objlib-cat:first-child {
+  margin-top: 0;
+}
+.objlib-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.objlib-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 5px;
+  padding: 5px 7px;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.objlib-item:hover {
+  border-color: var(--dim);
+}
+.objlib-item.active {
+  border-color: var(--sel);
+  background: #223047;
+}
+.objlib-sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--c, #7a8a9a);
+  flex: 0 0 auto;
+}
+.objlib-custom {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--dim);
+}
+.objlib-custom summary {
+  cursor: pointer;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.objlib-custom .field {
+  margin: 4px 0;
+}
+
 #status {
   position: absolute;
   bottom: 10px;

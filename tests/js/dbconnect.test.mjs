@@ -121,11 +121,14 @@ test('fromDbConnect -> toDbConnect: pass-through sections survive unchanged', ()
 });
 
 test('fromDbConnect -> toDbConnect: editor block survives', () => {
+  // dbconnect_sample.json is a frozen v6 fixture (not run through migrate()),
+  // so this checks round-trip fidelity against its own schemaVersion rather
+  // than the live SCHEMA_VERSION constant, which has since moved to v7.
   const orig = readFixture('dbconnect_sample.json');
   const state = fromDbConnect(orig);
   const out = toDbConnect(state);
 
-  assert.equal(out.editor.schemaVersion, SCHEMA_VERSION);
+  assert.equal(out.editor.schemaVersion, orig.editor.schemaVersion);
   assert.deepEqual(out.editor.naming, orig.editor.naming);
   assert.deepEqual(out.editor.binOverrides, orig.editor.binOverrides);
 });

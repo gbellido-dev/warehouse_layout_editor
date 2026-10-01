@@ -141,6 +141,9 @@ const validV3 = {
   edges: [],
   racks: [validV3Rack],
   bg: null,
+  objectTypes: {},
+  objects: [],
+  assets: {},
 };
 
 test('validateLayout accepts a rack with matching levelHeights', () => {

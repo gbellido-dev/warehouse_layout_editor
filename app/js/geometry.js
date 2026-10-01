@@ -117,6 +117,84 @@ export function resolveBayLabel(state, rack, bayIndex) {
   return `${rowToken}${sep}${String(bayNum).padStart(bayPad, '0')}`;
 }
 
+// ---------- generic rotated-object geometry (Workshop objects) ----------
+//
+// A generic object's (x, y) is its CENTRE (unlike zones/racks, which use the
+// SW corner) so rotation is a simple rotation about that centre. rotation is
+// in degrees and is applied as a standard CCW rotation in world space
+// (x = East, y = North):
+//   worldDx = lx*cos(theta) - ly*sin(theta)
+//   worldDy = lx*sin(theta) + ly*cos(theta)
+// where (lx, ly) is an offset from the centre along the object's own
+// width/depth axes (lx along "width", aligned to East at theta=0; ly along
+// "depth", aligned to North at theta=0).
+//
+// This SAME theta is used, with no sign flip, for the three.js rotation.y in
+// preview3d.js (three's world Z = -y, and the rotate-around-Y matrix happens
+// to match this mapping exactly). The 2D canvas renderer DOES need a sign
+// flip (ctx.rotate(-theta)) because screen Y is flipped relative to world Y
+// (sy() inverts y) — see objects/objectRenderer2d.js for the worked proof.
+
+export function degToRad(deg) {
+  return (deg * Math.PI) / 180;
+}
+
+// The 4 world-space corners of a (possibly rotated) object footprint, in a
+// fixed order relative to the object's own unrotated frame (SW, SE, NE, NW) —
+// stable across rotation, not geometrically sorted.
+export function getRotatedCorners(obj) {
+  const hw = obj.width / 2;
+  const hd = obj.depth / 2;
+  const theta = degToRad(obj.rotation || 0);
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  const local = [
+    [-hw, -hd],
+    [hw, -hd],
+    [hw, hd],
+    [-hw, hd],
+  ];
+  return local.map(([lx, ly]) => ({
+    x: obj.x + lx * cos - ly * sin,
+    y: obj.y + lx * sin + ly * cos,
+  }));
+}
+
+// World point (px, py) expressed in the object's own local frame (centre at
+// origin, +lx along its width axis, +ly along its depth axis). This is the
+// inverse of the rotation applied in getRotatedCorners.
+export function worldToObjectLocal(px, py, obj) {
+  const theta = degToRad(obj.rotation || 0);
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  const dx = px - obj.x;
+  const dy = py - obj.y;
+  return {
+    lx: dx * cos + dy * sin,
+    ly: -dx * sin + dy * cos,
+  };
+}
+
+// True if world point (px, py) falls inside the object's rotated footprint.
+export function pointInsideRotatedRectangle(px, py, obj) {
+  const { lx, ly } = worldToObjectLocal(px, py, obj);
+  return Math.abs(lx) <= obj.width / 2 && Math.abs(ly) <= obj.depth / 2;
+}
+
+// Axis-aligned bounding box (world space) of a (possibly rotated) object
+// footprint. Useful for broad-phase hit-testing and zoom-to-fit.
+export function objectBounds(obj) {
+  const corners = getRotatedCorners(obj);
+  const xs = corners.map((c) => c.x);
+  const ys = corners.map((c) => c.y);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+}
+
 // Produce the export payload: a deep copy of the editor state enriched with
 // derived fields (node zone, edge distance, expanded bins) that are convenient
 // for downstream consumers but are not part of the editable model.

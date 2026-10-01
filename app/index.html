@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Warehouse Layout Editor</title>
+    <title>Workshop Layout Editor</title>
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
     <div id="app">
       <div id="topbar">
-        <span class="brand">Warehouse Layout Editor</span>
+        <span class="brand">Workshop Layout Editor</span>
         <button class="btn tool active" data-tool="select" title="V">Select / Move</button>
         <button class="btn tool" data-tool="zone" title="Z — drag a rectangle">+ Zone</button>
         <button class="btn tool" data-tool="rack" title="R — drag along the row direction">+ Rack Row</button>
@@ -20,6 +20,7 @@
         <button class="btn" id="view2d">2D Plan</button>
         <button class="btn" id="view3d">3D Preview</button>
         <button class="btn active" id="toggleLabels" title="L — show/hide labels">Labels</button>
+        <button class="btn" id="toggleMode" title="M — toggle Edit / View (read-only, SCADA) mode">Edit Mode</button>
         <div class="sep"></div>
         <button class="btn" id="exportBtn">Export JSON</button>
         <button class="btn" id="importBtn">Import JSON</button>
@@ -31,6 +32,9 @@
       <div id="main">
         <div id="side">
           <div id="props"></div>
+
+          <h2>Object library</h2>
+          <div id="objectLibrary"></div>
 
           <h2>Background tracing image</h2>
           <div class="btnrow">

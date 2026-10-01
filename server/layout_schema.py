@@ -9,7 +9,11 @@ from __future__ import annotations
 
 from numbers import Real
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
+
+# visual.type / visual.fit — mirrors app/js/schema.js VISUAL_TYPES/VISUAL_FITS.
+VISUAL_TYPES = {"rectangle", "image", "svg", "billboard", "model3d"}
+VISUAL_FITS = {"contain", "cover"}
 
 # Editor-native kinds plus db_connect kinds tolerated on import (DEBT-005).
 NODE_KINDS = {
@@ -161,7 +165,75 @@ def validate_layout(layout) -> list[str]:
                                 f".levelHeights must contain only positive numbers"
                             )
 
+    # objectTypes — the generic object library (keyed by type id)
+    object_types = layout.get("objectTypes")
+    if not isinstance(object_types, dict):
+        errors.append("objectTypes must be an object")
+        object_types = {}
+    else:
+        for key, t in object_types.items():
+            if not isinstance(t, dict):
+                errors.append(f"objectTypes.{key} must be an object")
+                continue
+            if not isinstance(t.get("id"), str) or t.get("id") != key:
+                errors.append(f"objectTypes.{key}.id must be a string equal to its key")
+            if not isinstance(t.get("name"), str):
+                errors.append(f"objectTypes.{key}.name must be a string")
+            if not isinstance(t.get("category"), str):
+                errors.append(f"objectTypes.{key}.category must be a string")
+            for k in ("width", "depth", "height"):
+                if not _is_number(t.get(k)) or t.get(k, 0) <= 0:
+                    errors.append(f"objectTypes.{key}.{k} must be a positive number")
+            if t.get("visual") is not None:
+                _validate_visual(t["visual"], f"objectTypes.{key}.visual", errors)
+
+    # objects — generic object instances placed in the layout
+    objects = layout.get("objects")
+    if not isinstance(objects, list):
+        errors.append("objects must be an array")
+    else:
+        type_names = set(object_types.keys())
+        object_ids = set()
+        for i, o in enumerate(objects):
+            o_id = o.get("id")
+            if not isinstance(o_id, str) or len(o_id) == 0:
+                errors.append(f"objects[{i}].id must be a non-empty string")
+            elif o_id in object_ids:
+                errors.append(f"objects[{i}].id {o_id!r} is not unique")
+            else:
+                object_ids.add(o_id)
+            if not isinstance(o.get("type"), str) or o.get("type") not in type_names:
+                errors.append(f"objects[{i}].type {o.get('type')!r} is not a defined objectType")
+            if not _is_number(o.get("x")) or not _is_number(o.get("y")):
+                errors.append(f"objects[{i}] needs numeric x,y (centre point)")
+            if o.get("rotation") is not None and not _is_number(o.get("rotation")):
+                errors.append(f"objects[{i}].rotation must be a number")
+            for k in ("width", "depth", "height"):
+                if o.get(k) is not None and (not _is_number(o.get(k)) or o.get(k) <= 0):
+                    errors.append(f"objects[{i}].{k} must be a positive number when set")
+            if o.get("visual") is not None:
+                _validate_visual(o["visual"], f"objects[{i}].visual", errors)
+            if o.get("dataBinding") is not None and not isinstance(o.get("dataBinding"), dict):
+                errors.append(f"objects[{i}].dataBinding must be an object")
+            if o.get("properties") is not None and not isinstance(o.get("properties"), dict):
+                errors.append(f"objects[{i}].properties must be an object")
+
+    if not isinstance(layout.get("assets"), dict):
+        errors.append("assets must be an object")
+
     return errors
+
+
+def _validate_visual(visual, path, errors):
+    if not isinstance(visual, dict):
+        errors.append(f"{path} must be an object")
+        return
+    if visual.get("type") not in VISUAL_TYPES:
+        errors.append(f"{path}.type must be one of {sorted(VISUAL_TYPES)}")
+    if visual.get("fit") is not None and visual.get("fit") not in VISUAL_FITS:
+        errors.append(f"{path}.fit must be one of {sorted(VISUAL_FITS)}")
+    if visual.get("source") is not None and not isinstance(visual.get("source"), str):
+        errors.append(f"{path}.source must be a string")
 
 
 _ORIENTATION_TO_DIR = {"length_along_x": "E", "length_along_y": "N"}
@@ -216,4 +288,7 @@ def from_db_connect(db_layout: dict) -> dict:
         "edges": edges,
         "racks": racks,
         "bg": db_layout.get("bg"),
+        "objectTypes": db_layout.get("objectTypes") or {},
+        "objects": db_layout.get("objects") or [],
+        "assets": db_layout.get("assets") or {},
     }

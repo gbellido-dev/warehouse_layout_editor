@@ -36,7 +36,8 @@ const DEFAULT_BIN_LABEL_FORMAT = {
 // Convert editor-native state to the db_connect file format (v5).
 // Generates the bins array. Pass-through sections are written back unchanged.
 export function toDbConnect(state) {
-  const { schemaVersion, naming, binOverrides, categories, vehicles, dwell_times, ...rest } = state;
+  const { schemaVersion, naming, binOverrides, categories, vehicles, dwell_times, objectTypes, objects, assets, ...rest } =
+    state;
 
   const editor = {
     schemaVersion,
@@ -87,6 +88,9 @@ export function toDbConnect(state) {
     racks,
     bg: rest.bg ?? null,
     bins,
+    objectTypes: objectTypes ?? {},
+    objects: objects ?? [],
+    assets: assets ?? {},
     editor,
   };
 }
@@ -139,5 +143,8 @@ export function fromDbConnect(dbLayout) {
     edges,
     racks,
     bg: dbLayout.bg ?? null,
+    objectTypes: dbLayout.objectTypes ?? {},
+    objects: dbLayout.objects ?? [],
+    assets: dbLayout.assets ?? {},
   };
 }

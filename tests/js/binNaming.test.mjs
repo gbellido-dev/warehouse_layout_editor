@@ -45,6 +45,9 @@ function makeState(rackOverrides = {}, stateOverrides = {}) {
       },
     ],
     bg: null,
+    objectTypes: {},
+    objects: [],
+    assets: {},
     ...stateOverrides,
   };
 }

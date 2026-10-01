@@ -4,7 +4,18 @@
 // zoom). It is rebuilt from a layout snapshot each time the user opens 3D.
 
 import * as THREE from '../vendor/three.module.js';
+import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { zoneOf, levelBaseZ } from './geometry.js';
+import { resolveObject } from './objects/objectFactory.js';
+import { getAssetUrl, isAssetSource, assetIdFromSource } from './assets/assetStore.js';
+
+// Resolves a visual.source to a loadable URL: asset:// ids go through
+// IndexedDB (assetStore.js), anything else (an external URL) is used as-is.
+// Returns null if the asset cannot be found — callers keep their fallback.
+async function resolveAssetUrl(source) {
+  if (isAssetSource(source)) return getAssetUrl(assetIdFromSource(source));
+  return source;
+}
 
 export function createPreview3D(wrap) {
   let ctx = null; // { renderer, raf }
@@ -175,6 +186,88 @@ export function createPreview3D(wrap) {
           eg.position.copy(m.position);
           scene.add(eg);
         }
+      }
+    });
+
+    // ----- generic workshop objects (visual.type: rectangle/image/svg/billboard/model3d) -----
+    // Every object gets a box fallback immediately (so the view never looks
+    // broken while an async asset loads, or if it fails/is missing); richer
+    // visuals replace the fallback in-place once loaded.
+    const gltfLoader = new GLTFLoader();
+    (state.objects || []).forEach((o) => {
+      const resolved = resolveObject(o, state.objectTypes || {});
+      const zone = zoneOf(state.zones, o.x, o.y);
+      const elev = zone ? zone.elev : 0;
+      // Same +theta world-space rotation convention as geometry.js — no sign
+      // flip needed here (see the derivation in geometry.js's header comment).
+      const theta = (o.rotation || 0) * (Math.PI / 180);
+
+      const group = new THREE.Group();
+      group.position.copy(W(o.x, o.y, elev + resolved.height / 2));
+      group.rotation.y = theta;
+      scene.add(group);
+
+      const fallbackGeo = new THREE.BoxGeometry(resolved.width, resolved.height, resolved.depth);
+      const fallback = new THREE.Mesh(
+        fallbackGeo,
+        new THREE.MeshLambertMaterial({ color: new THREE.Color(resolved.color), transparent: true, opacity: 0.85 }),
+      );
+      group.add(fallback);
+      const fallbackEdges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(fallbackGeo),
+        new THREE.LineBasicMaterial({ color: 0x10141a }),
+      );
+      group.add(fallbackEdges);
+
+      if (showLabels) {
+        const lb = makeLabel(o.name || resolved.name, 5, '#eef2f6');
+        lb.position.set(0, resolved.height / 2 + 1.2, 0);
+        group.add(lb);
+      }
+
+      const visual = resolved.visual;
+      const replaceFallback = (obj3d) => {
+        group.remove(fallback, fallbackEdges);
+        group.add(obj3d);
+      };
+
+      if (visual.type === 'model3d' && visual.source) {
+        resolveAssetUrl(visual.source).then((url) => {
+          if (!url) return;
+          gltfLoader.load(
+            url,
+            (gltf) => {
+              const box = new THREE.Box3().setFromObject(gltf.scene);
+              const size = new THREE.Vector3();
+              box.getSize(size);
+              const scale = size.x > 0 && size.z > 0 ? Math.min(resolved.width / size.x, resolved.depth / size.z) : 1;
+              const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
+              gltf.scene.scale.setScalar(s);
+              const center = new THREE.Vector3();
+              box.getCenter(center);
+              gltf.scene.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+              replaceFallback(gltf.scene);
+            },
+            undefined,
+            () => {
+              // load failed — keep the box fallback already in the scene
+            },
+          );
+        });
+      } else if (visual.type === 'billboard' && visual.source) {
+        resolveAssetUrl(visual.source).then((url) => {
+          if (!url) return;
+          new THREE.TextureLoader().load(
+            url,
+            (tex) => {
+              const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+              sprite.scale.set(resolved.width, resolved.height, 1);
+              replaceFallback(sprite);
+            },
+            undefined,
+            () => {},
+          );
+        });
       }
     });
 

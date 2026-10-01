@@ -7,12 +7,25 @@ Tracked deferrals. Each entry: date introduced, scope, and what unblocks resolut
 ## DEBT-001 — editor.js exceeds the 400-line file cap
 
 - **Introduced:** 2026-06-23 (pre-existing at Step 2)
-- **Current size:** ~1060 lines after Step 3 additions
+- **Current size:** ~1496 lines after the Workshop Layout Editor generic-object
+  work (2026-10-02).
 - **Why deferred:** editor.js is a single-file browser module with no build step.
   Splitting it cleanly requires either a bundler or careful ES module re-wiring.
-  Out of scope for Steps 2–3, which are data-model changes.
-- **Unblocks at:** Step 4 (adopt db_connect format) — that step restructures the
-  persistence layer and is the right moment to also split editor concerns.
+  The generic-object work deliberately did **not** grow this debt further than
+  necessary: the new object system's actual logic (creation/inheritance,
+  rotation-aware hit-testing, 2D rendering, the library panel, asset storage,
+  image loading) was split out into `objects/objectFactory.js`,
+  `objects/objectHitTest.js`, `objects/objectRenderer2d.js`,
+  `objects/objectTypes.js`, `assets/assetStore.js`, `assets/imageLoader.js`,
+  and `ui/objectLibrary.js` — all pure/unit-tested modules. What grew
+  editor.js's own line count is the wiring (draw/hitTest/delete branches, the
+  properties-panel markup + event bindings for objects, the Edit/View mode
+  toggle), which is inherent to editor.js's existing role as the stateful
+  orchestrator and would remain there even after a split.
+- **Unblocks at:** A dedicated refactor pass (no bundler yet) that moves
+  per-entity-kind properties-panel rendering (zone/rack/node/edge/object) out
+  of editor.js into their own `ui/*PropertiesPanel.js` modules, mirroring
+  `ui/objectLibrary.js`'s accessor/callback pattern.
 
 ## DEBT-002 — expandBins() z-coordinate uniform formula **PAID (Step 3)**
 
@@ -96,6 +109,21 @@ Tracked deferrals. Each entry: date introduced, scope, and what unblocks resolut
   the layout state or localStorage.
 - **Unblocks at:** Step 5 or later — add `showLabels` to the layout or a separate
   UI prefs store if users ask for persistence.
+
+## DEBT-013 — Edit/View mode is session-only, not persisted (2026-10-02)
+
+- **Introduced:** 2026-10-02 (generic object model / Workshop Layout Editor)
+- **Current state:** `editMode` is a module-level variable in `editor.js`,
+  reset to `true` (Edit Mode) on every page load, same pattern as DEBT-012's
+  label toggle. It is not stored in the layout state or localStorage.
+- **Why deferred:** The spec calls for two *conceptual* modes, not persisted
+  UI state; defaulting to Edit Mode on every load is the safer choice for an
+  editor (a stale View-mode draft should never silently hide the toolbar from
+  someone who just opened the app to make a change).
+- **Unblocks at:** If a real SCADA-preview deployment wants to always boot
+  straight into View mode (e.g. a kiosk embedding this app read-only), add a
+  URL param or a small separate UI-prefs store rather than putting it in the
+  portable layout JSON.
 
 ## DEBT-011 — whse_location format intentionally diverges from db_connect sample (Step 4, 2026-06-23)
 
