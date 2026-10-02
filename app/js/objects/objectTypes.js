@@ -19,7 +19,14 @@ export const CATEGORIES = [
 ];
 
 function type(id, name, category, width, depth, height, color, visual) {
-  return { id, name, category, width, depth, height, color, visual: visual ?? { type: 'rectangle' } };
+  return { id, name, category, width, depth, height, color, visual: visual ?? icon(id) };
+}
+
+// Built-in types render as their top-down SVG icon by default; the icon's
+// intrinsic width/height (set in each file) match width_m/depth_m so the
+// default fit:'contain' covers the footprint edge-to-edge with no distortion.
+function icon(id) {
+  return { type: 'svg', source: `assets/icons/${id}.svg` };
 }
 
 export const DEFAULT_OBJECT_TYPES = {

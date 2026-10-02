@@ -3757,7 +3757,8 @@
       "height": 2.4,
       "color": "#5279a8",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/cnc.svg"
       }
     },
     "lathe": {
@@ -3769,7 +3770,8 @@
       "height": 1.6,
       "color": "#4a7a9c",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/lathe.svg"
       }
     },
     "mill": {
@@ -3781,7 +3783,8 @@
       "height": 2,
       "color": "#52708a",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/mill.svg"
       }
     },
     "drill": {
@@ -3793,7 +3796,8 @@
       "height": 2.1,
       "color": "#6a7f94",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/drill.svg"
       }
     },
     "press": {
@@ -3805,7 +3809,8 @@
       "height": 2.6,
       "color": "#3d6b8a",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/press.svg"
       }
     },
     "saw": {
@@ -3817,7 +3822,8 @@
       "height": 1.4,
       "color": "#567c91",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/saw.svg"
       }
     },
     "robot": {
@@ -3829,7 +3835,8 @@
       "height": 2,
       "color": "#c45252",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/robot.svg"
       }
     },
     "cobot": {
@@ -3841,7 +3848,8 @@
       "height": 1.4,
       "color": "#c47a52",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/cobot.svg"
       }
     },
     "agv": {
@@ -3853,7 +3861,8 @@
       "height": 0.4,
       "color": "#c4a052",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/agv.svg"
       }
     },
     "table": {
@@ -3865,7 +3874,8 @@
       "height": 0.75,
       "color": "#a87d52",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/table.svg"
       }
     },
     "workbench": {
@@ -3877,7 +3887,8 @@
       "height": 0.9,
       "color": "#a87d52",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/workbench.svg"
       }
     },
     "cabinet": {
@@ -3889,7 +3900,8 @@
       "height": 2,
       "color": "#6b5a45",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/cabinet.svg"
       }
     },
     "shelf": {
@@ -3901,7 +3913,8 @@
       "height": 2,
       "color": "#7a6a50",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/shelf.svg"
       }
     },
     "wall": {
@@ -3913,7 +3926,8 @@
       "height": 2.5,
       "color": "#555f68",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/wall.svg"
       }
     },
     "door": {
@@ -3925,7 +3939,8 @@
       "height": 2.1,
       "color": "#8a6a4a",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/door.svg"
       }
     },
     "pillar": {
@@ -3937,7 +3952,8 @@
       "height": 3,
       "color": "#4a4a4a",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/pillar.svg"
       }
     },
     "extinguisher": {
@@ -3949,7 +3965,8 @@
       "height": 0.6,
       "color": "#c0392b",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/extinguisher.svg"
       }
     },
     "emergency_exit": {
@@ -3961,7 +3978,8 @@
       "height": 2.1,
       "color": "#2ecc71",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/emergency_exit.svg"
       }
     },
     "fence": {
@@ -3973,7 +3991,8 @@
       "height": 1.1,
       "color": "#d4a53d",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/fence.svg"
       }
     },
     "danger_zone": {
@@ -3985,7 +4004,8 @@
       "height": 0.05,
       "color": "#e67e22",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/danger_zone.svg"
       }
     },
     "pc": {
@@ -3997,7 +4017,8 @@
       "height": 0.4,
       "color": "#3d4f5c",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/pc.svg"
       }
     },
     "display": {
@@ -4009,7 +4030,8 @@
       "height": 0.6,
       "color": "#2c3e50",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/display.svg"
       }
     },
     "electrical_panel": {
@@ -4021,7 +4043,8 @@
       "height": 2,
       "color": "#34495e",
       "visual": {
-        "type": "rectangle"
+        "type": "svg",
+        "source": "assets/icons/electrical_panel.svg"
       }
     }
   },
